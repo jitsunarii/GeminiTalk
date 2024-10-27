@@ -179,26 +179,104 @@
       </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="Gemini.js"></script>
     <script>
-      $(document).ready(function () {
-        $(".input-form").on("submit", (e) => {
-          e.preventDefault();
-          let SendMessage = $("#input-field").val();
-          if (SendMessage.length < 2) {
-            return;
-          } else {
-            $(".chat-messages").append(
-              `<div class="message user">
-                   <div class="avatar">U</div>
-                   <div class="message-content">${SendMessage}</div>
-                 </div>`
-            );
-            $("#input-field").val("");
-            const chatMessages = $(".chat-messages");
-            chatMessages.scrollTop(chatMessages[0].scrollHeight);
-          }
-        });
-      });
+$(document).ready(async function () {
+  // ページ読み込み時に設定を読み込むのを待つ
+  try {
+    await loadConfig();
+  } catch (error) {
+    console.error('設定の読み込みに失敗しました:', error);
+    return;
+  }
+
+  $(".input-form").on("submit", async (e) => {
+    e.preventDefault();
+    let SendMessage = $("#input-field").val();
+    
+    if (SendMessage.length < 2) {
+      return;
+    }
+
+    // ユーザーメッセージの表示
+    $(".chat-messages").append(`
+      <div class="message user">
+        <div class="avatar">U</div>
+        <div class="message-content">${SendMessage}</div>
+      </div>
+    `);
+
+    // 入力フィールドをクリアし、スクロール
+    $("#input-field").val("");
+    const chatMessages = $(".chat-messages");
+    chatMessages.scrollTop(chatMessages[0].scrollHeight);
+
+    // ローディング表示（オプション）
+    $(".chat-messages").append(`
+      <div class="message bot" id="loading-message">
+        <div class="avatar">AI</div>
+        <div class="message-content">
+          入力を処理しています...
+        </div>
+      </div>
+    `);
+    chatMessages.scrollTop(chatMessages[0].scrollHeight);
+
+    try {
+      // Gemini APIからの応答を取得
+      const aiResponse = await generateGeminiResponse(SendMessage);
+      
+      // ローディングメッセージを削除
+      $("#loading-message").remove();
+
+      // AI応答の表示
+      $(".chat-messages").append(`
+        <div class="message bot">
+          <div class="avatar">AI</div>
+          <div class="message-content">${aiResponse}</div>
+        </div>
+      `);
+
+      // 最新のメッセージまでスクロール
+      chatMessages.scrollTop(chatMessages[0].scrollHeight);
+
+    } catch (error) {
+      console.error("Error:", error);
+      $("#loading-message").remove();
+      $(".chat-messages").append(`
+        <div class="message bot">
+          <div class="avatar">AI</div>
+          <div class="message-content">申し訳ありません。エラーが発生しました。</div>
+        </div>
+      `);
+    }
+  });
+});
+
+
+
+
+
+
+      // $(document).ready(function () {
+      //   $(".input-form").on("submit", (e) => {
+      //     e.preventDefault();
+      //     let SendMessage = $("#input-field").val();
+      //     if (SendMessage.length < 2) {
+      //       return;
+      //     } else {
+      //       $(".chat-messages").append(
+      //         `<div class="message user">
+      //              <div class="avatar">U</div>
+      //              <div class="message-content">${SendMessage}</div>
+      //            </div>`
+      //       );
+      //       $("#input-field").val("");
+      //       const chatMessages = $(".chat-messages");
+      //       chatMessages.scrollTop(chatMessages[0].scrollHeight);
+      //     }
+      //   });
+      // });
     </script>
   </body>
 </html>
