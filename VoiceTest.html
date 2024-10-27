@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VOICEVOX Web Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.7/axios.min.js"></script>
+  </head>
+  <body>
+    <div style="max-width: 600px; margin: 20px auto; padding: 20px">
+      <h1>VOICEVOX 音声生成</h1>
+      <form
+        id="voiceForm"
+        style="display: flex; flex-direction: column; gap: 10px"
+      >
+        <input
+          type="text"
+          id="textInput"
+          value="こんにちは"
+          style="padding: 8px; font-size: 16px"
+        />
+        <button
+          type="submit"
+          style="padding: 8px; font-size: 16px; cursor: pointer"
+        >
+          音声生成
+        </button>
+      </form>
+      <div style="margin-top: 20px">
+        <audio id="audioPlayer" controls style="width: 100%"></audio>
+      </div>
+    </div>
+
+    <script>
+      const rpc = axios.create({
+        baseURL: "http://localhost:50021",
+        proxy: false,
+      });
+
+      async function generateAndPlayAudio(text) {
+        try {
+          // audio_queryのリクエスト
+          const audio_query = await rpc.post(
+            `audio_query?text=${encodeURIComponent(text)}&speaker=2`
+          );
+
+          // synthesisのリクエスト
+          const synthesis = await rpc.post(
+            "synthesis?speaker=2",
+            audio_query.data,
+            {
+              responseType: "blob",
+              headers: {
+                accept: "audio/wav",
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          // Blobを作成してaudio要素で再生
+          const audioBlob = new Blob([synthesis.data], { type: "audio/wav" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audioPlayer = document.getElementById("audioPlayer");
+          audioPlayer.src = audioUrl;
+          audioPlayer.play();
+        } catch (error) {
+          console.error("エラーが発生しました:", error);
+          alert(
+            "音声の生成に失敗しました。VOICEVOXが起動していることを確認してください。"
+          );
+        }
+      }
+
+      document
+        .getElementById("voiceForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const text = document.getElementById("textInput").value;
+          await generateAndPlayAudio(text);
+        });
+    </script>
+  </body>
+</html>
