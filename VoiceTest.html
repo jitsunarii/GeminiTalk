@@ -32,52 +32,43 @@
     </div>
 
     <script>
-      const rpc = axios.create({
-        baseURL: "http://localhost:50021",
-        proxy: false,
-      });
+ $(document).ready(async function () {
+  try {
+    await loadConfigurations();
+  } catch (error) {
+    console.error('設定の読み込みに失敗しました:', error);
+    return;
+  }
 
-      async function generateAndPlayAudio(text) {
-        try {
-          // audio_queryのリクエスト
-          const audio_query = await rpc.post(
-            `audio_query?text=${encodeURIComponent(text)}&speaker=2`
-          );
+  $(".input-form").on("submit", async (e) => {
+    e.preventDefault();
+    const userInput = $("#input-field").val();
+    
+    if (userInput.length < 2) return;
 
-          // synthesisのリクエスト
-          const synthesis = await rpc.post(
-            "synthesis?speaker=2",
-            audio_query.data,
-            {
-              responseType: "blob",
-              headers: {
-                accept: "audio/wav",
-                "Content-Type": "application/json",
-              },
-            }
-          );
+    // ユーザーメッセージの表示
+    displayMessage('user', userInput);
+    $("#input-field").val("");
 
-          // Blobを作成してaudio要素で再生
-          const audioBlob = new Blob([synthesis.data], { type: "audio/wav" });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          const audioPlayer = document.getElementById("audioPlayer");
-          audioPlayer.src = audioUrl;
-          audioPlayer.play();
-        } catch (error) {
-          console.error("エラーが発生しました:", error);
-          alert(
-            "音声の生成に失敗しました。VOICEVOXが起動していることを確認してください。"
-          );
-        }
-      }
+    // 入力中表示
+    const loadingMessage = showTypingIndicator();
 
-      document
-        .getElementById("voiceForm")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const text = document.getElementById("textInput").value;
-          await generateAndPlayAudio(text);
-        });
+    try {
+      // AI応答の生成
+      const aiResponse = await generateGeminiResponse(userInput);
+      
+      // 入力中表示を削除
+      loadingMessage.remove();
+      
+      // AI応答の表示
+      displayMessage('bot', aiResponse);
+    } catch (error) {
+      console.error("Error:", error);
+      loadingMessage.remove();
+      displayMessage('bot', PROMPTS.system.response_style.error);
+    }
+  });
+});
     </script>
   </body>
 </html>

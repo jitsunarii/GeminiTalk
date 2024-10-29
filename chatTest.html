@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI チャットボット</title>
     <style>
-      * {
+    * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
@@ -150,6 +150,19 @@
           max-width: 85%;
         }
       }
+
+      @keyframes typing {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+  100% { content: ""; }
+}
+
+#loading-message .message-content::after {
+  content: "";
+  animation: typing 1.5s infinite;
+}
     </style>
   </head>
   <body>
@@ -182,9 +195,8 @@
     <script src="Gemini.js"></script>
     <script>
 $(document).ready(async function () {
-  // ページ読み込み時に設定を読み込むのを待つ
   try {
-    await loadConfig();
+    await loadConfigurations();
   } catch (error) {
     console.error('設定の読み込みに失敗しました:', error);
     return;
@@ -192,63 +204,33 @@ $(document).ready(async function () {
 
   $(".input-form").on("submit", async (e) => {
     e.preventDefault();
-    let SendMessage = $("#input-field").val();
+    const userInput = $("#input-field").val();
     
-    if (SendMessage.length < 2) {
-      return;
-    }
+    if (userInput.length < 2) return;
 
     // ユーザーメッセージの表示
-    $(".chat-messages").append(`
-      <div class="message user">
-        <div class="avatar">U</div>
-        <div class="message-content">${SendMessage}</div>
-      </div>
-    `);
-
-    // 入力フィールドをクリアし、スクロール
+    displayMessage('user', userInput);
     $("#input-field").val("");
-    const chatMessages = $(".chat-messages");
-    chatMessages.scrollTop(chatMessages[0].scrollHeight);
 
-    // ローディング表示（オプション）
-    $(".chat-messages").append(`
-      <div class="message bot" id="loading-message">
-        <div class="avatar">AI</div>
-        <div class="message-content">
-          入力を処理しています...
-        </div>
-      </div>
-    `);
-    chatMessages.scrollTop(chatMessages[0].scrollHeight);
+    // 入力中表示
+    const $loadingMessage = showTypingIndicator();  // jQuery オブジェクトとして受け取る
 
     try {
-      // Gemini APIからの応答を取得
-      const aiResponse = await generateGeminiResponse(SendMessage);
+      // AI応答の生成
+      const aiResponse = await generateGeminiResponse(userInput);
       
-      // ローディングメッセージを削除
-      $("#loading-message").remove();
-
+      // 入力中表示を削除
+      if ($loadingMessage && $loadingMessage.length) {
+        $loadingMessage.remove();
+      }
       // AI応答の表示
-      $(".chat-messages").append(`
-        <div class="message bot">
-          <div class="avatar">AI</div>
-          <div class="message-content">${aiResponse}</div>
-        </div>
-      `);
-
-      // 最新のメッセージまでスクロール
-      chatMessages.scrollTop(chatMessages[0].scrollHeight);
-
+      displayMessage('bot', aiResponse);
     } catch (error) {
       console.error("Error:", error);
-      $("#loading-message").remove();
-      $(".chat-messages").append(`
-        <div class="message bot">
-          <div class="avatar">AI</div>
-          <div class="message-content">申し訳ありません。エラーが発生しました。</div>
-        </div>
-      `);
+      if ($loadingMessage && $loadingMessage.length) {
+        $loadingMessage.remove();
+      }
+      displayMessage('bot', PROMPTS.system.response_style.error);
     }
   });
 });
